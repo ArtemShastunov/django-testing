@@ -47,7 +47,7 @@ def test_bad_words_in_comment(
 
     assert Comment.objects.count() == 0
     assert response.status_code == HTTPStatus.OK
-
+    
     form = response.context['form']
     assertFormError(form, 'text', WARNING)
 
