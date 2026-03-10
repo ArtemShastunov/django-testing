@@ -47,7 +47,7 @@ class TestLogic(BaseTest):
         })
         self.assertEqual(Note.objects.count(), before)
         self.assertEqual(response.status_code, HTTPStatus.OK)
-        
+
         form = response.context['form']
         assertFormError(form, 'slug', self.note.slug + WARNING)
 
