@@ -1,5 +1,4 @@
 from http import HTTPStatus
-from django.db import transaction
 from pytils.translit import slugify
 
 from notes.forms import WARNING
@@ -24,14 +23,16 @@ class TestLogic(BaseTest):
 
     def test_authorized_can_create_note(self):
         """Авторизованный может создать заметку."""
+        Note.objects.all().delete()
         before = Note.objects.count()
+
         response = self.author_client.post(self.urls['add'], data={
             'title': self.NEW_TITLE,
             'text': self.NEW_TEXT,
-            'slug': self.NEW_SLUG,
         })
+
         self.assertEqual(Note.objects.count(), before + 1)
-        new_note = Note.objects.get(slug=self.NEW_SLUG)
+        new_note = Note.objects.get()
         self.assertEqual(new_note.title, self.NEW_TITLE)
         self.assertEqual(new_note.text, self.NEW_TEXT)
         self.assertEqual(new_note.author, self.author)
@@ -53,15 +54,16 @@ class TestLogic(BaseTest):
 
     def test_slug_auto_generated(self):
         """Slug генерируется автоматически, если не указан."""
+        Note.objects.all().delete()
         test_title = 'Тест для слага'
-        with transaction.atomic():
-            Note.objects.filter(title=test_title).delete()
 
         self.author_client.post(self.urls['add'], data={
             'title': test_title,
             'text': 'Текст',
         })
-        note = Note.objects.get(title=test_title)
+
+        self.assertEqual(Note.objects.count(), 1)
+        note = Note.objects.get()
         expected_slug = slugify(test_title)
         self.assertEqual(note.slug, expected_slug)
 
@@ -76,16 +78,11 @@ class TestLogic(BaseTest):
         self.assertEqual(note.title, self.NEW_TITLE)
         self.assertEqual(note.text, self.NEW_TEXT)
         self.assertEqual(note.slug, self.NEW_SLUG)
-        self.assertEqual(note.author, self.author)
+        self.assertEqual(note.author, self.note.author)
         self.assertEqual(response.status_code, HTTPStatus.FOUND)
 
     def test_user_cannot_edit_other_note(self):
         """Нельзя редактировать чужую заметку."""
-        before_title = self.note.title
-        before_text = self.note.text
-        before_slug = self.note.slug
-        before_author = self.note.author
-
         response = self.reader_client.post(self.urls['edit'], data={
             'title': 'Взлом',
             'text': 'Взлом',
@@ -93,10 +90,10 @@ class TestLogic(BaseTest):
         })
 
         note = Note.objects.get(pk=self.note.pk)
-        self.assertEqual(note.title, before_title)
-        self.assertEqual(note.text, before_text)
-        self.assertEqual(note.slug, before_slug)
-        self.assertEqual(note.author, before_author)
+        self.assertEqual(note.title, self.note.title)
+        self.assertEqual(note.text, self.note.text)
+        self.assertEqual(note.slug, self.note.slug)
+        self.assertEqual(note.author, self.note.author)
         self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
 
     def test_user_can_delete_note(self):

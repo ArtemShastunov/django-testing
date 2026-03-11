@@ -1,17 +1,20 @@
 import pytest
-
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.test import Client
 from django.urls import reverse
 from django.utils import timezone
 
+from news.forms import BAD_WORDS
 from news.models import Comment, News
 
 User = get_user_model()
 
-
 pytestmark = pytest.mark.django_db
+
+# Константы вместо фикстур
+BAD_WORDS_LIST = BAD_WORDS
+FORM_DATA = {'text': 'Тестовый комментарий'}
 
 
 @pytest.fixture
@@ -63,15 +66,12 @@ def news_for_count(db):
     """Фикстура: новости для теста пагинации."""
     count = settings.NEWS_COUNT_ON_HOME_PAGE + 1
     now = timezone.now().date()
-    news_list = []
     for i in range(count):
-        n = News.objects.create(
+        News.objects.create(
             title=f'Новость {i}',
             text='Текст',
             date=now - timezone.timedelta(days=i)
         )
-        news_list.append(n)
-    return news_list
 
 
 @pytest.fixture
@@ -88,7 +88,6 @@ def comment(db, user, news):
 def comments_for_sort(db, user, news):
     """Фикстура: комментарии с разным временем для сортировки."""
     now = timezone.now()
-    comments = []
     for i in range(3):
         c = Comment.objects.create(
             author=user,
@@ -97,8 +96,6 @@ def comments_for_sort(db, user, news):
         )
         c.created = now - timezone.timedelta(hours=2 - i)
         c.save()
-        comments.append(c)
-    return comments
 
 
 @pytest.fixture
@@ -114,13 +111,18 @@ def login_url():
 
 
 @pytest.fixture
-def bad_words_list():
-    """Фикстура: список запрещённых слов."""
-    from news.forms import BAD_WORDS
-    return BAD_WORDS
+def detail_url(news):
+    """Фикстура: URL страницы новости."""
+    return reverse('news:detail', kwargs={'pk': news.pk})
 
 
 @pytest.fixture
-def form_data():
-    """Фикстура: данные для формы комментария."""
-    return {'text': 'Тестовый комментарий'}
+def edit_url(comment):
+    """Фикстура: URL редактирования комментария."""
+    return reverse('news:edit', kwargs={'pk': comment.pk})
+
+
+@pytest.fixture
+def delete_url(comment):
+    """Фикстура: URL удаления комментария."""
+    return reverse('news:delete', kwargs={'pk': comment.pk})

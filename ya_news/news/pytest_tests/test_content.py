@@ -1,6 +1,5 @@
 import pytest
 from django.conf import settings
-from django.urls import reverse
 
 from news.forms import CommentForm
 
@@ -24,10 +23,9 @@ def test_news_sorted_newest_first(client, news_for_count, home_url):
 
 
 def test_comments_sorted_chronologically(
-        client, comments_for_sort, news):
+        client, comments_for_sort, news, detail_url):
     """Комментарии отсортированы от старого к новому."""
-    url = reverse('news:detail', kwargs={'pk': news.pk})
-    response = client.get(url)
+    response = client.get(detail_url)
     comments = list(response.context['object'].comment_set.all())
     timestamps = [c.created for c in comments]
     sorted_timestamps = sorted(timestamps)
@@ -42,17 +40,14 @@ def test_comments_sorted_chronologically(
     ]
 )
 def test_comment_form_availability(
-        client_fixture, should_have_form, request, news):
+        client_fixture, should_have_form, request, news, detail_url):
     """Форма комментария: анониму нет, авторизованному есть."""
     client = request.getfixturevalue(client_fixture)
-    url = reverse('news:detail', kwargs={'pk': news.pk})
-    response = client.get(url)
-
+    response = client.get(detail_url)
+    has_form = 'form' in response.context
+    assert has_form is should_have_form
     if should_have_form:
-        assert 'form' in response.context
         assert isinstance(
             response.context['form'],
             CommentForm
         )
-    else:
-        assert 'form' not in response.context
