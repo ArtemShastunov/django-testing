@@ -1,5 +1,4 @@
 from notes.forms import NoteForm
-from notes.models import Note
 
 from .base_test import BaseTest
 
@@ -14,15 +13,9 @@ class TestContent(BaseTest):
 
     def test_other_user_notes_not_in_list(self):
         """Чужие заметки не в списке."""
-        other = Note.objects.create(
-            title='Чужая',
-            text='Текст',
-            slug='other-slug',
-            author=self.reader
-        )
         response = self.author_client.get(self.urls['list'])
         object_list = response.context['object_list']
-        self.assertNotIn(other, object_list)
+        self.assertNotIn(self.other_note, object_list)
 
     def test_form_in_create_and_edit_pages(self):
         """Форма есть на страницах создания и редактирования."""

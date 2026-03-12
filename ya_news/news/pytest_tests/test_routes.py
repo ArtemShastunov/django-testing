@@ -1,8 +1,8 @@
 from http import HTTPStatus
 
 import pytest
-from django.urls import reverse
 from pytest_django.asserts import assertRedirects
+
 
 pytestmark = pytest.mark.django_db
 
@@ -21,6 +21,8 @@ pytestmark = pytest.mark.django_db
         ('delete_url', 'not_author_client', HTTPStatus.NOT_FOUND, 'get'),
         ('login_url', 'client', HTTPStatus.OK, 'get'),
         ('login_url', 'client', HTTPStatus.OK, 'post'),
+        ('signup_url', 'client', HTTPStatus.OK, 'get'),
+        ('logout_url', 'client', HTTPStatus.OK, 'post'),
     ]
 )
 def test_page_status(
@@ -29,29 +31,9 @@ def test_page_status(
     url = request.getfixturevalue(url_fixture)
     client = request.getfixturevalue(client_fixture)
 
-    if method == 'get':
-        response = client.get(url)
-    else:
-        response = client.post(url)
+    response = getattr(client, method)(url)
 
     assert response.status_code == expected_status
-
-
-@pytest.mark.parametrize(
-    'url_name',
-    ['users:signup', 'users:login']
-)
-def test_auth_pages_get_status(url_name, client):
-    """Страницы auth доступны GET запросом."""
-    url = reverse(url_name)
-    response = client.get(url)
-    assert response.status_code == HTTPStatus.OK
-
-
-def test_logout_page_post_status(client):
-    """Страница logout доступна POST запросом."""
-    response = client.post(reverse('users:logout'))
-    assert response.status_code == HTTPStatus.OK
 
 
 @pytest.mark.parametrize(

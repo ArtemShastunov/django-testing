@@ -23,10 +23,7 @@ class TestRoutes(BaseTest):
         for url in urls_to_test:
             with self.subTest(url=url):
                 response = self.author_client.get(url)
-                self.assertEqual(
-                    response.status_code,
-                    HTTPStatus.OK
-                )
+                self.assertEqual(response.status_code, HTTPStatus.OK)
 
     def test_pages_redirect_anonymous(self):
         """Аноним перенаправляется на страницу логина."""
@@ -54,20 +51,13 @@ class TestRoutes(BaseTest):
         for url in urls:
             with self.subTest(url=url):
                 response = self.reader_client.get(url)
-                self.assertEqual(
-                    response.status_code,
-                    HTTPStatus.NOT_FOUND
-                )
+                self.assertEqual(response.status_code, HTTPStatus.NOT_FOUND)
 
     def test_auth_pages_available_anonymous(self):
         """Страницы auth доступны анонимным."""
         for url in [self.urls['signup'], self.urls['login']]:
             with self.subTest(url=url):
                 response = self.client.get(url)
-                self.assertEqual(
-                    response.status_code,
-                    HTTPStatus.OK
-                )
-
+                self.assertEqual(response.status_code, HTTPStatus.OK)
         response = self.client.post(self.urls['logout'])
         self.assertEqual(response.status_code, HTTPStatus.OK)

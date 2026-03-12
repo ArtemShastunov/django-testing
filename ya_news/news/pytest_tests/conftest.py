@@ -1,128 +1,114 @@
 import pytest
-from django.conf import settings
 from django.contrib.auth import get_user_model
-from django.test import Client
+from django.test.client import Client
 from django.urls import reverse
 from django.utils import timezone
+from datetime import timedelta
 
-from news.forms import BAD_WORDS
 from news.models import Comment, News
 
 User = get_user_model()
 
-pytestmark = pytest.mark.django_db
 
-# Константы вместо фикстур
-BAD_WORDS_LIST = BAD_WORDS
-FORM_DATA = {'text': 'Тестовый комментарий'}
+@pytest.fixture
+def author(db):
+    return User.objects.create_user(username='TestUser', password='pass')
 
 
 @pytest.fixture
-def user(db):
-    """Фикстура: тестовый пользователь."""
-    return User.objects.create_user(
-        username='TestUser',
-        password='password'
-    )
+def not_author(db):
+    return User.objects.create_user(username='NotAuthor', password='pass')
 
 
 @pytest.fixture
-def another_user(db):
-    """Фикстура: второй тестовый пользователь."""
-    return User.objects.create_user(
-        username='AnotherUser',
-        password='password'
-    )
-
-
-@pytest.fixture
-def author_client(user):
-    """Фикстура: клиент с авторизованным пользователем."""
+def author_client(author):
     client = Client()
-    client.force_login(user)
+    client.force_login(author)
     return client
 
 
 @pytest.fixture
-def not_author_client(another_user):
-    """Фикстура: клиент с другим пользователем."""
+def not_author_client(not_author):
     client = Client()
-    client.force_login(another_user)
+    client.force_login(not_author)
     return client
 
 
 @pytest.fixture
 def news(db):
-    """Фикстура: тестовая новость."""
-    return News.objects.create(
-        title='Тестовая новость',
-        text='Текст тестовой новости',
-        date=timezone.now().date()
-    )
+    return News.objects.create(title='Тест', text='Текст')
 
 
 @pytest.fixture
+def comment(db, news, author):
+    return Comment.objects.create(
+        news=news,
+        author=author,
+        text='Коммент'
+    )
+
+
+# Фикстуры для тестов контента
+@pytest.fixture
 def news_for_count(db):
-    """Фикстура: новости для теста пагинации."""
-    count = settings.NEWS_COUNT_ON_HOME_PAGE + 1
-    now = timezone.now().date()
-    for i in range(count):
+    """Создаёт 11 новостей для проверки пагинации."""
+    now = timezone.now()
+    return [
         News.objects.create(
             title=f'Новость {i}',
             text='Текст',
-            date=now - timezone.timedelta(days=i)
+            date=now - timedelta(days=i)
         )
+        for i in range(11)
+    ]
 
 
 @pytest.fixture
-def comment(db, user, news):
-    """Фикстура: комментарий от автора."""
-    return Comment.objects.create(
-        author=user,
-        news=news,
-        text='Тестовый комментарий'
-    )
-
-
-@pytest.fixture
-def comments_for_sort(db, user, news):
-    """Фикстура: комментарии с разным временем для сортировки."""
+def comments_for_sort(db, news, author):
+    """Создаёт комментарии с разными датами для проверки сортировки."""
     now = timezone.now()
-    for i in range(3):
-        c = Comment.objects.create(
-            author=user,
+    return [
+        Comment.objects.create(
             news=news,
-            text=f'Комментарий {i}',
+            author=author,
+            text=f'Коммент {i}',
+            created=now - timedelta(hours=i)
         )
-        c.created = now - timezone.timedelta(hours=2 - i)
-        c.save()
+        for i in range(10)
+    ]
 
 
+# Фикстуры для URL (чтобы не использовать reverse в тестах)
 @pytest.fixture
 def home_url():
-    """Фикстура: URL главной страницы."""
     return reverse('news:home')
 
 
 @pytest.fixture
 def login_url():
-    """Фикстура: URL страницы логина."""
     return reverse('users:login')
 
 
 @pytest.fixture
+def signup_url():
+    return reverse('users:signup')
+
+
+@pytest.fixture
+def logout_url():
+    return reverse('users:logout')
+
+
+@pytest.fixture
 def detail_url(news):
-    """Фикстура: URL страницы новости."""
     return reverse('news:detail', kwargs={'pk': news.pk})
 
 
 @pytest.fixture
 def edit_url(comment):
-    """Фикстура: URL редактирования комментария."""
     return reverse('news:edit', kwargs={'pk': comment.pk})
 
 
 @pytest.fixture
 def delete_url(comment):
-    """Фикстура: URL удаления комментария."""
     return reverse('news:delete', kwargs={'pk': comment.pk})

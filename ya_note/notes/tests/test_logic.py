@@ -12,26 +12,23 @@ class TestLogic(BaseTest):
 
     def test_anonymous_cannot_create_note(self):
         """Аноним не может создать заметку."""
-        before = Note.objects.count()
+        Note.objects.all().delete()
         response = self.client.post(self.urls['add'], data={
             'title': self.NEW_TITLE,
             'text': self.NEW_TEXT,
             'slug': self.NEW_SLUG,
         })
-        self.assertEqual(Note.objects.count(), before)
+        self.assertEqual(Note.objects.count(), 0)
         self.assertEqual(response.status_code, HTTPStatus.FOUND)
 
     def test_authorized_can_create_note(self):
         """Авторизованный может создать заметку."""
         Note.objects.all().delete()
-        before = Note.objects.count()
-
         response = self.author_client.post(self.urls['add'], data={
             'title': self.NEW_TITLE,
             'text': self.NEW_TEXT,
         })
-
-        self.assertEqual(Note.objects.count(), before + 1)
+        self.assertEqual(Note.objects.count(), 1)
         new_note = Note.objects.get()
         self.assertEqual(new_note.title, self.NEW_TITLE)
         self.assertEqual(new_note.text, self.NEW_TEXT)
@@ -48,7 +45,6 @@ class TestLogic(BaseTest):
         })
         self.assertEqual(Note.objects.count(), before)
         self.assertEqual(response.status_code, HTTPStatus.OK)
-
         form = response.context['form']
         assertFormError(form, 'slug', self.note.slug + WARNING)
 
@@ -56,12 +52,10 @@ class TestLogic(BaseTest):
         """Slug генерируется автоматически, если не указан."""
         Note.objects.all().delete()
         test_title = 'Тест для слага'
-
         self.author_client.post(self.urls['add'], data={
             'title': test_title,
             'text': 'Текст',
         })
-
         self.assertEqual(Note.objects.count(), 1)
         note = Note.objects.get()
         expected_slug = slugify(test_title)
@@ -88,7 +82,6 @@ class TestLogic(BaseTest):
             'text': 'Взлом',
             'slug': 'hacked',
         })
-
         note = Note.objects.get(pk=self.note.pk)
         self.assertEqual(note.title, self.note.title)
         self.assertEqual(note.text, self.note.text)
